@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - ScholarBot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+<div style="min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;">
+    <div class="login-card">
+        <span class="logo" style="display:block;margin-bottom:8px;">ScholarBot</span>
+        <h2>Email Verification</h2>
+        <p class="subtitle">Enter the 6-digit code sent to your email</p>
+
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="text" name="code" placeholder="Enter 6-digit code" maxlength="6" required
+                   style="letter-spacing:8px;font-size:22px;text-align:center;">
+            <button type="submit" class="neon-btn" style="width:100%;margin-top:8px;">Verify Account</button>
+        </form>
+
+        <p class="bottom-text">Didn't receive the code? <a href="{% url 'resend_code' %}">Resend</a></p>
+    </div>
+</div>
+</body>
+</html>

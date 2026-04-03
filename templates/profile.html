@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Profile - ScholarBot{% endblock %}
+
+{% block content %}
+<section class="profile-container">
+
+    <div class="card profile-card">
+        <h2>User Profile</h2>
+        <div class="profile-info">
+            <p><strong>Username</strong> {{ request.user.username }}</p>
+            <p><strong>Email</strong> {{ request.user.email }}</p>
+            <p><strong>Member Since</strong> {{ request.user.date_joined|date:"F Y" }}</p>
+        </div>
+        <button class="neon-btn" onclick="openEditModal()">Edit Profile</button>
+    </div>
+
+    <div class="card security-card">
+        <h2>Security Settings</h2>
+        <a href="{% url 'change_password' %}" class="neon-btn" style="text-decoration:none;">Change Password</a>
+        <hr>
+        <h3>Danger Zone</h3>
+        <p>Deleting your account is permanent and cannot be undone.</p>
+        <button class="danger-btn" onclick="openDeleteModal()">Delete Account</button>
+    </div>
+
+</section>
+
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h2>Edit Profile</h2>
+        <form method="POST" action="{% url 'edit_profile' %}">
+            {% csrf_token %}
+            <label>Username</label>
+            <input type="text"  name="username" value="{{ request.user.username }}" required>
+            <label>Email</label>
+            <input type="email" name="email"    value="{{ request.user.email }}"    required>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="neon-btn" style="margin-top:0;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal" id="deleteModal">
+    <div class="modal-content danger-modal">
+        <h2>Delete Account</h2>
+        <p>Are you sure you want to permanently delete your account?<br>This action <strong>cannot be undone.</strong></p>
+        <div class="modal-buttons">
+            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+            <form method="POST" action="{% url 'delete_account' %}">
+                {% csrf_token %}
+                <button type="submit" class="danger-btn">Delete Account</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const editModal   = document.getElementById("editModal");
+const deleteModal = document.getElementById("deleteModal");
+function openEditModal()    { editModal.classList.add("show"); }
+function closeEditModal()   { editModal.classList.remove("show"); }
+function openDeleteModal()  { deleteModal.classList.add("show"); }
+function closeDeleteModal() { deleteModal.classList.remove("show"); }
+window.onclick = function(e){ if(e.target===editModal) closeEditModal(); if(e.target===deleteModal) closeDeleteModal(); }
+</script>
+{% endblock %}

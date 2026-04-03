@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="center-body">
+    <div class="login-container">
+        <div class="login-card">
+            <a class="logo" href="{% url 'home' %}">ScholarBot</a>
+            <h2>Welcome Back</h2>
+            <p class="subtitle">Sign in to continue your studies</p>
+
+            <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="{% if message.tags == 'success' %}success-message{% else %}error-message{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+                <input type="text"     name="username" placeholder="Username" required autocomplete="username">
+                <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+                <button class="neon-btn" type="submit">Sign In</button>
+                <div class="extra-links">
+                    <a href="{% url 'password_reset' %}">Forgot password?</a>
+                </div>
+            </form>
+
+            <p class="register-link">
+                No account yet? <a href="{% url 'register' %}">Create one</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

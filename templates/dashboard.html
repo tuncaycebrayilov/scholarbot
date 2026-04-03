@@ -1,0 +1,678 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - ScholarBot{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-container">
+
+    <!-- Upload Section -->
+    <div class="card upload-card">
+        <h2>Upload Lecture PDF</h2>
+
+        {% for message in messages %}
+            {% if "upload" in message.tags %}
+                <p class="error-message">{{ message }}</p>
+            {% endif %}
+        {% endfor %}
+
+        <form id="uploadForm" method="POST" action="{% url 'upload_pdf' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="drop-area" id="drop-area">
+                <p>Drag &amp; drop your PDF here</p>
+                <span>or</span>
+                <label class="upload-btn">
+                    Browse File
+                    <input type="file" name="pdf" id="fileInput" accept=".pdf" hidden required>
+                </label>
+                <p class="file-name" id="file-name"></p>
+            </div>
+            <button id="analyzeBtn" type="submit" class="neon-btn analyze-btn">Analyze</button>
+        </form>
+    </div>
+
+    <!-- Quick Tools -->
+    <div class="card tool-card">
+        <h2>Quick Tools</h2>
+
+        {% for message in messages %}
+            {% if "convert" in message.tags %}
+                <p class="error-message">{{ message }}</p>
+            {% endif %}
+        {% endfor %}
+
+        <p class="tool-desc">Convert your files to PDF before analyzing</p>
+
+        <form id="convertForm" method="POST" action="{% url 'convert_to_pdf' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="drop-area tool-drop" id="toolDropArea">
+                <p>Drag &amp; drop file here</p>
+                <span>or</span>
+                <input type="file" name="file" id="toolFileInput" hidden>
+                <button type="button" onclick="document.getElementById('toolFileInput').click()">Select File</button>
+            </div>
+            <p id="toolFileName" class="file-name"></p>
+            <button type="submit" class="convert-btn">Convert to PDF</button>
+        </form>
+
+        <p class="supported-text">Supports: DOCX · PPTX · PPSX</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="card stats-card">
+        <h2>Your Activity</h2>
+        <div class="stat-box">
+            <p>Total Uploads</p>
+            <h3>{{ total_uploads|default:"0" }}</h3>
+        </div>
+        <div class="stat-box">
+            <p>Completed Quizzes</p>
+            <h3>{{ completed_quizzes }}</h3>
+        </div>
+
+        <div class="stat-box">
+            <p>Best Score</p>
+            <h3>
+                {% if best_score %}
+                    {{ best_score }} / 10
+                {% else %}
+                    —
+                {% endif %}
+            </h3>
+        </div>
+    </div>
+
+</section>
+
+{% if converted and converted_pdf %}
+<div class="banner-overlay" id="bannerOverlay"></div>
+<div class="convert-banner">
+    <p>File converted successfully</p>
+    <p>Would you like to analyze it now?</p>
+    <div class="banner-buttons">
+        <form method="POST" action="{% url 'upload_pdf' %}">
+            {% csrf_token %}
+            <input type="hidden" name="converted_pdf" value="{{ converted_pdf }}">
+            <button type="submit" id="analyzeNowBtn" class="neon-btn">Analyze Now</button>
+        </form>
+        <a href="{% url 'download_pdf' %}?pdf={{ converted_pdf }}" class="download-btn">Download PDF</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Previous Lectures -->
+<section class="lecture-history-section">
+    <div class="card lecture-history">
+        <h2>Previous Lectures</h2>
+        <ul class="lecture-list">
+            {% for lec in lectures %}
+            <li>
+                <div class="lecture-row">
+                    <button class="lecture-btn"
+                        data-id="{{ lec.id }}"
+                        data-name="{{ lec.pdf_name }}"
+                        data-summary="{{ lec.summary }}"
+                        data-highlights="{{ lec.highlights }}">
+                        <div class="lecture-left">📄 {{ lec.pdf_name }}</div>
+                        <div class="lecture-date">{{ lec.created_at|date:"M d, H:i" }}</div>
+                    </button>
+                    <a href="{% url 'delete_lecture' lec.id %}" class="delete-btn"
+                       onclick="openDeleteModal(this.href); return false;">🗑</a>
+                </div>
+            </li>
+            {% empty %}
+            <p style="font-family:var(--font-mono);font-size:13px;color:var(--text-faint);font-style:italic;padding:16px 0;">
+                No lectures uploaded yet.
+            </p>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+
+<!-- Analysis Section -->
+<section class="analysis-section" id="analysisSection"
+    {% if show_analysis %}style="display:grid;"{% else %}style="display:none;"{% endif %}>
+
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+            <h2 style="margin-bottom:0;">AI Summary</h2>
+            <button id="closeAnalysis" class="neon-btn" style="margin-top:0;padding:7px 16px;font-size:10px;">Close</button>
+        </div>
+        <p class="pdf-name" id="lectureName" style="margin-top:16px;">Lecture: {{ pdf_name }}</p>
+        <div class="result-text" id="summaryText">{{ summary }}</div>
+    </div>
+
+    <div class="card">
+        <h2>Key Highlights</h2>
+        <ul class="highlight-list" id="highlightsList">
+            {% for h in highlights_list %}<li>{{ h }}</li>{% endfor %}
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Exam Quiz</h2>
+
+        <!-- NEW BUTTON -->
+        <button id="generateQuizBtn" class="neon-btn">
+            Generate Quiz
+        </button>
+
+        <div id="quizContainer"></div>
+        <button id="nextQuestionBtn" class="neon-btn" onclick="nextQuestion()" style="display:none;">
+            Next Question
+        </button>
+
+        <div id="quizResult"></div>
+    </div>
+
+</section>
+
+<!-- Analyze Loading Screen -->
+<div id="loadingScreen" class="loading-screen" style="display:none;">
+    <div class="loader-box">
+        <h2>Analysing Lecture…</h2>
+        <p>Generating AI Summary</p>
+        <p>Extracting Key Highlights</p>
+        <p>Creating Exam Questions</p>
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<!-- Convert Loading Screen -->
+<div id="convertLoadingScreen" class="loading-screen" style="display:none;">
+    <div class="loader-box">
+        <h2>Converting File…</h2>
+        <p>Reading Document Structure</p>
+        <p>Exporting to PDF Format</p>
+        <p>Preparing Your File</p>
+        <div class="spinner"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+
+/* ── Element references ─────────────────────────────────── */
+const dropArea        = document.getElementById("drop-area");
+const fileInput       = document.getElementById("fileInput");
+const fileName        = document.getElementById("file-name");
+const analyzeBtn      = document.getElementById("analyzeBtn");
+const loading         = document.getElementById("loadingScreen");
+const toolDropArea    = document.getElementById("toolDropArea");
+const toolFileInput   = document.getElementById("toolFileInput");
+const toolFileName    = document.getElementById("toolFileName");
+const analysisSection = document.getElementById("analysisSection");
+const lectureName     = document.getElementById("lectureName");
+const summaryText     = document.getElementById("summaryText");
+const highlightsList  = document.getElementById("highlightsList");
+const closeBtn        = document.getElementById("closeAnalysis");
+const nextQuestionBtn = document.getElementById("nextQuestionBtn");
+const generateQuizBtn = document.getElementById("generateQuizBtn");
+const convertForm     = document.getElementById("convertForm");
+const convertLoading  = document.getElementById("convertLoadingScreen");
+const analyzeNowBtn   = document.getElementById("analyzeNowBtn");
+const alertModal = document.getElementById("answerAlertModal");
+/* ══════════════════════════════════════════════════════════
+   QUIZ STATE
+   Storage keys use the lecture DB id (a plain number) so
+   there is zero risk of filename encoding / escaping bugs.
+
+   localStorage keys:
+     quiz_state_<id>    → { currentQuestion, score, userAnswers }
+     quiz_finished_<id> → "true"
+     quiz_review_<id>   → final result HTML string
+══════════════════════════════════════════════════════════ */
+let quizData        = JSON.parse('{{ quiz|default:"[]"|escapejs }}');
+let currentQuestion = 0;
+let score           = 0;
+let userAnswers     = [];
+let activeLectureId = {{ current_id|default:"null" }};   // DB id of the open lecture
+let activeName      = "{{ pdf_name|escapejs }}";          // display name only
+
+/* ══════════════════════════════════════════════════════════
+   LOW-LEVEL STORAGE  (keyed by numeric DB id)
+══════════════════════════════════════════════════════════ */
+function lsKey(id)         { return "quiz_state_"    + id; }
+function lsKeyDone(id)     { return "quiz_finished_" + id; }
+function lsKeyReview(id)   { return "quiz_review_"   + id; }
+
+function lsSaveProgress(id) {
+    localStorage.setItem(lsKey(id), JSON.stringify({
+        currentQuestion : currentQuestion,
+        score           : score,
+        userAnswers     : userAnswers
+    }));
+}
+
+function lsSaveCompleted(id, reviewHTML) {
+    localStorage.setItem(lsKeyDone(id),    "true");
+    localStorage.setItem(lsKeyReview(id),  reviewHTML);
+    localStorage.removeItem(lsKey(id));
+}
+
+function lsClear(id) {
+    localStorage.removeItem(lsKey(id));
+    localStorage.removeItem(lsKeyDone(id));
+    localStorage.removeItem(lsKeyReview(id));
+}
+
+function lsLoad(id) {
+    /* Returns one of three shapes:
+       { status: "done",     reviewHTML }
+       { status: "progress", currentQuestion, score, userAnswers }
+       { status: "fresh" }
+    */
+    if (localStorage.getItem(lsKeyDone(id)) === "true") {
+        return { status: "done", reviewHTML: localStorage.getItem(lsKeyReview(id)) || "" };
+    }
+    const raw = localStorage.getItem(lsKey(id));
+    if (raw) {
+        try {
+            const s = JSON.parse(raw);
+            return { status: "progress",
+                     currentQuestion : s.currentQuestion,
+                     score           : s.score,
+                     userAnswers     : s.userAnswers };
+        } catch(e) { /* fall through */ }
+    }
+    return { status: "fresh" };
+}
+
+/* ══════════════════════════════════════════════════════════
+   DB SAVE  (fire-and-forget, errors only logged)
+══════════════════════════════════════════════════════════ */
+function dbSave(id, completed) {
+    if (!id) return;
+    fetch("/save-quiz/" + id + "/", {
+        method  : "POST",
+        headers : {
+            "Content-Type" : "application/json",
+            "X-CSRFToken"  : "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+            answers   : userAnswers,
+            score     : score,
+            completed : completed
+        })
+    }).catch(function(err) {
+        console.error("Quiz DB save failed:", err);
+    });
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUILD REVIEW HTML  (shared by live finish + DB restore)
+══════════════════════════════════════════════════════════ */
+function buildReviewHTML(answers, finalScore) {
+    let html = `<h3 style="font-family:var(--font-display);font-size:20px;font-style:italic;color:var(--text-bright);margin-bottom:16px;">
+                    Score: ${finalScore} / ${answers.length}
+                </h3>`;
+
+    if (finalScore >= 8)
+        html += `<p style="color:#70c090;font-family:var(--font-mono);font-size:13px;margin-bottom:16px;">Excellent work — keep it up.</p>`;
+    else if (finalScore >= 5)
+        html += `<p style="color:var(--gold);font-family:var(--font-mono);font-size:13px;margin-bottom:16px;">Good effort — review the missed topics.</p>`;
+    else
+        html += `<p style="color:#e07060;font-family:var(--font-mono);font-size:13px;margin-bottom:16px;">Consider re-reading this lecture carefully.</p>`;
+
+    answers.forEach(function(q, index) {
+        const correct = q.selected === q.correct;
+        html += `
+        <div style="margin:14px 0;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:rgba(10,14,26,0.3);">
+            <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-faint);">Q${index + 1}</span><br>
+            <span style="font-family:var(--font-body);font-size:15px;color:var(--text);line-height:1.6;">${q.question}</span><br><br>
+            <span style="color:${correct ? '#70c090' : '#e07060'};font-family:var(--font-mono);font-size:13px;">▸ ${q.selected}</span><br>
+            ${!correct ? `<span style="color:#70c090;font-family:var(--font-mono);font-size:13px;">✓ ${q.correct}</span>` : ""}
+        </div>`;
+    });
+
+    return html;
+}
+
+/* ══════════════════════════════════════════════════════════
+   OPEN LECTURE
+   Single entry point called every time a lecture is shown —
+   whether from the history list or on page load.
+   Always saves question-0 state immediately so close →
+   reopen always works, even with zero answers given.
+══════════════════════════════════════════════════════════ */
+function openLecture(id, quizDataForLecture) {
+    activeLectureId = id;
+    quizData        = quizDataForLecture;
+
+    document.getElementById("quizContainer").innerHTML = "";
+    document.getElementById("quizResult").innerHTML    = "";
+
+    const saved = lsLoad(id);
+
+    if (saved.status === "done") {
+        /* ── Already finished ── */
+        if (nextQuestionBtn) nextQuestionBtn.style.display = "none";
+        if (generateQuizBtn) generateQuizBtn.style.display = "none";
+        document.getElementById("quizContainer").innerHTML = ""; 
+        document.getElementById("quizResult").innerHTML = saved.reviewHTML;
+        return;
+
+    } else if (saved.status === "progress") {
+    /* ── Mid-quiz ── */
+
+    currentQuestion = saved.currentQuestion;
+    score           = saved.score;
+    userAnswers     = saved.userAnswers;
+
+    if (generateQuizBtn) generateQuizBtn.style.display = "none";
+
+    if (nextQuestionBtn) nextQuestionBtn.style.display = "block";
+
+    document.getElementById("quizResult").innerHTML = "";
+
+    // ❗ IMPORTANT: only load if quiz exists
+    if (quizData && quizData.length > 0) {
+        loadQuestion();
+    } else {
+        // fallback (if quiz not loaded yet)
+        document.getElementById("quizContainer").innerHTML = "<p>Click Generate Quiz again</p>";
+        generateQuizBtn.style.display = "block";
+        nextQuestionBtn.style.display = "none";
+    }
+
+    } else {
+        /* ── Fresh start ──
+           Show question 0 and immediately persist so that
+           close → reopen finds the state in localStorage. */
+        currentQuestion = 0;
+        score           = 0;
+        userAnswers     = [];
+        if (nextQuestionBtn) nextQuestionBtn.style.display = "block";
+
+        generateQuizBtn.style.display = "block";
+        nextQuestionBtn.style.display = "none";
+        document.getElementById("quizContainer").innerHTML = "";
+        document.getElementById("quizResult").innerHTML = "";
+
+        // reset state
+        currentQuestion = 0;
+        score = 0;
+        userAnswers = [];
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DOMContentLoaded
+══════════════════════════════════════════════════════════ */
+document.addEventListener("DOMContentLoaded", function() {
+
+    {% if show_analysis %}
+        /*
+         * Brand-new upload just finished.
+         * Clear any stale state, then open the lecture fresh.
+         * activeLectureId and quizData are already set from the
+         * Django template variables above.
+         */
+        if (activeLectureId) lsClear(activeLectureId);
+        openLecture(activeLectureId, quizData);
+
+    {% else %}
+        /*
+         * Normal page load (no fresh upload).
+         * Check the DB state Django passed in context first,
+         * then hand off to openLecture so localStorage stays in sync.
+         */
+        if (activeLectureId) {
+            const dbCompleted = {{ quiz_completed|yesno:"true,false" }};
+            const dbAnswers   = JSON.parse('{{ saved_answers|default:"[]"|escapejs }}');
+            const dbScore     = {{ saved_score|default:0 }};
+
+            if (dbCompleted && dbAnswers.length > 0) {
+                /* Seed localStorage from DB so openLecture picks it up */
+                const reviewHTML = buildReviewHTML(dbAnswers, dbScore);
+                lsSaveCompleted(activeLectureId, reviewHTML);
+
+            } else if (!dbCompleted && dbAnswers.length > 0) {
+                /* Seed localStorage from DB */
+                currentQuestion = dbAnswers.length;
+                score           = dbScore;
+                userAnswers     = dbAnswers;
+                lsSaveProgress(activeLectureId);
+            }
+            /* If nothing in DB, openLecture will handle fresh start */
+
+            openLecture(activeLectureId, quizData);
+        }
+    {% endif %}
+
+    /* Auto-scroll after a new upload */
+    if (new URLSearchParams(window.location.search).get("analyzed") === "1") {
+        const section = document.getElementById("analysisSection");
+        if (section) section.scrollIntoView({ behavior: "smooth" });
+    }
+
+});
+
+/* ── Tool drop area ─────────────────────────────────────── */
+toolDropArea.addEventListener("click", (e) => { if(e.target === toolDropArea) toolFileInput.click(); });
+toolFileInput.addEventListener("change", () => { if(toolFileInput.files.length > 0) toolFileName.textContent = toolFileInput.files[0].name; });
+toolDropArea.addEventListener("dragover", (e) => { e.preventDefault(); toolDropArea.style.borderColor = "var(--gold-dim)"; });
+toolDropArea.addEventListener("dragleave", () => { toolDropArea.style.borderColor = ""; });
+toolDropArea.addEventListener("drop", (e) => { e.preventDefault(); toolFileInput.files = e.dataTransfer.files; toolFileName.textContent = e.dataTransfer.files[0].name; });
+
+/* ── Convert banner overlay close ───────────────────────── */
+document.getElementById("bannerOverlay")?.addEventListener("click", () => {
+    document.querySelector(".convert-banner").style.display = "none";
+    document.getElementById("bannerOverlay").style.display = "none";
+});
+
+/* ── Analyze button ─────────────────────────────────────── */
+analyzeBtn.addEventListener("click", function() {
+    if (fileInput.files.length === 0) {
+        fileName.textContent = "Please select a PDF file first.";
+        fileName.style.color = "#e07060";
+        return;
+    }
+    loading.style.display = "grid";
+});
+
+/* ── Upload drop area ───────────────────────────────────── */
+dropArea.addEventListener("dragover", (e) => e.preventDefault());
+dropArea.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    fileInput.files = files;
+    fileName.textContent = files[0].name;
+});
+fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+        fileName.textContent = fileInput.files[0].name;
+        fileName.style.color = "var(--gold)";
+    }
+});
+
+/* ── Convert form loading screen ────────────────────────── */
+if (convertForm) {
+    convertForm.addEventListener("submit", function() {
+        if (toolFileInput.files.length === 0) return;
+        convertLoading.style.display = "grid";
+    });
+}
+
+/* ── Analyze Now button (convert banner) ────────────────── */
+if (analyzeNowBtn) {
+    analyzeNowBtn.addEventListener("click", function() {
+        loading.style.display = "grid";
+    });
+}
+
+/* ── Lecture history buttons ────────────────────────────── */
+document.querySelectorAll(".lecture-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+        /* Update display */
+        analysisSection.style.display = "grid";
+        lectureName.innerText = "Lecture: " + this.dataset.name;
+        summaryText.innerText = this.dataset.summary;
+        activeName = this.dataset.name;
+
+        /* Render highlights */
+        highlightsList.innerHTML = "";
+        this.dataset.highlights.split("\n").forEach(function(h) {
+            if (h.trim() !== "") {
+                const li = document.createElement("li");
+                li.innerText = h.trim();
+                highlightsList.appendChild(li);
+            }
+        });
+
+       openLecture(parseInt(this.dataset.id, 10), []);
+    });
+});
+
+/* ── Close analysis section ─────────────────────────────── */
+closeBtn.addEventListener("click", function() {
+    analysisSection.style.display = "none";
+    window.history.replaceState({}, document.title, "/dashboard/");
+});
+
+/* ══════════════════════════════════════════════════════════
+   QUIZ RENDER
+══════════════════════════════════════════════════════════ */
+function loadQuestion() {
+    if (!quizData || quizData.length === 0) return;
+    const q = quizData[currentQuestion];
+    let html = `<p class="question">Question ${currentQuestion + 1} / ${quizData.length}</p>
+                <p class="question">${q.question}</p>`;
+    q.options.forEach(function(option) {
+        html += `<label class="option">
+                    <input type="radio" name="quizOption" value="${option}">
+                    ${option}
+                 </label>`;
+    });
+    document.getElementById("quizContainer").innerHTML = html;
+}
+
+function nextQuestion() {
+    if (currentQuestion >= quizData.length) return;
+
+    const selected = document.querySelector('input[name="quizOption"]:checked');
+    if (!selected) {
+        document.getElementById("answerAlertModal").classList.add("show");
+        return;
+    }
+
+    if (selected.value === quizData[currentQuestion].answer) score++;
+
+    userAnswers.push({
+        question : quizData[currentQuestion].question,
+        selected : selected.value,
+        correct  : quizData[currentQuestion].answer
+    });
+
+    currentQuestion++;
+
+    if (currentQuestion < quizData.length) {
+        /* Save after every answered question */
+        lsSaveProgress(activeLectureId);
+        dbSave(activeLectureId, false);
+        loadQuestion();
+
+    } else {
+        /* Quiz finished */
+        document.getElementById("quizContainer").innerHTML = "";
+        window.history.replaceState({}, document.title, "/dashboard/");
+        if (nextQuestionBtn) nextQuestionBtn.style.display = "none";
+        if (generateQuizBtn) generateQuizBtn.style.display = "none";
+
+        const reviewHTML = buildReviewHTML(userAnswers, score);
+        document.getElementById("quizResult").innerHTML = reviewHTML;
+
+        lsSaveCompleted(activeLectureId, reviewHTML);
+        dbSave(activeLectureId, true);
+    }
+}
+
+/* ── Delete modal ───────────────────────────────────────── */
+let deleteUrl = null;
+
+function openDeleteModal(url) {
+    deleteUrl = url;
+    document.getElementById("deleteModal").classList.add("show");
+    document.getElementById("confirmDeleteBtn").href = deleteUrl;
+}
+
+function closeDeleteModal() {
+    document.getElementById("deleteModal").classList.remove("show");
+}
+
+/* ── Answer alert modal ─────────────────────────────────── */
+function closeAnswerAlert() {
+    document.getElementById("answerAlertModal").classList.remove("show");
+}
+
+
+
+if (alertModal) {
+    alertModal.addEventListener("click", function(e) {
+        if (e.target === this) closeAnswerAlert();
+    });
+}
+
+
+/* generate quiz */
+if (generateQuizBtn) {
+    generateQuizBtn.addEventListener("click", function() {
+
+        console.log("BUTTON CLICKED");
+
+        if (!activeLectureId) return;
+
+        fetch(`/get-quiz/${activeLectureId}/`)
+            .then(res => res.json())
+            .then(data => {
+
+                console.log("DATA:", data);
+
+                quizData = data.quiz || [];
+
+                if (quizData.length === 0) {
+                    alert("No quiz available.");
+                    return;
+                }
+
+                currentQuestion = 0;
+                score = 0;
+                userAnswers = [];
+
+                generateQuizBtn.style.display = "none";
+                nextQuestionBtn.style.display = "block";
+
+                loadQuestion();
+            });
+
+    });
+}
+
+</script>
+
+<!-- Delete Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content danger-modal">
+        <h2>Delete Lecture</h2>
+        <p>Are you sure you want to delete this lecture? This action cannot be undone.</p>
+        <div class="modal-buttons">
+            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+            <a id="confirmDeleteBtn" class="danger-btn">Delete</a>
+        </div>
+    </div>
+</div>
+
+<!-- Answer Alert Modal -->
+<div class="modal" id="answerAlertModal">
+    <div class="modal-content">
+        <h2>Select an Answer</h2>
+        <p>Please choose one of the options before moving to the next question.</p>
+        <div class="modal-buttons">
+            <button class="neon-btn" onclick="closeAnswerAlert()" style="margin-top:0;">Got it</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Verify Email - ScholarBot{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <a class="logo" href="{% url 'home' %}">ScholarBot</a>
+        <h2>Email Verification</h2>
+        <p class="subtitle">A code was sent to your new email address</p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="text" name="code" placeholder="Enter verification code" required
+                   style="letter-spacing:4px;text-align:center;">
+            <button type="submit" class="neon-btn" style="width:100%;margin-top:8px;">Verify Email</button>
+        </form>
+
+        <p class="register-link">
+            Didn't receive the code? <a href="{% url 'resend_email_code' %}">Resend code</a>
+        </p>
+
+        {% if error %}
+        <div class="error-message" style="margin-top:16px;">{{ error }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

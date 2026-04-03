@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="center-body">
+    <div class="login-container">
+        <div class="login-card">
+            <a class="logo" href="{% url 'home' %}">ScholarBot</a>
+            <h2>Create Account</h2>
+            <p class="subtitle">Begin your journey with AI-powered study</p>
+
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <input type="text"     name="username"  placeholder="Full Name"        required autocomplete="name">
+                <input type="email"    name="email"     placeholder="Email Address"    required autocomplete="email">
+                <input type="password" name="password1" placeholder="Password"         autocomplete="new-password">
+                <input type="password" name="password2" placeholder="Confirm Password" autocomplete="new-password">
+                <button class="neon-btn" type="submit">Create Account</button>
+            </form>
+
+            <p class="register-link">
+                Already have an account? <a href="{% url 'login' %}">Sign in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+<script>
+tsParticles.load("particles-bg", {
+    background: { color: "transparent" },
+    fpsLimit: 50,
+    particles: {
+        number: { value: 35 },
+        color: { value: ["#c9a84c", "#7a5f28", "#e4c06e"] },
+        links: { enable: true, distance: 140, color: "#7a5f28", opacity: 0.18, width: 1 },
+        move: { enable: true, speed: 0.4 },
+        size: { value: { min: 1, max: 2 } },
+        opacity: { value: { min: 0.1, max: 0.4 } }
+    }
+});
+</script>
+{% endblock %}

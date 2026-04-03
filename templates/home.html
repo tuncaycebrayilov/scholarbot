@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Home - ScholarBot{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <h1>Turn Lecture Slides Into<br><span>Exam Success</span></h1>
+    <p>
+        Upload your lecture presentation. ScholarBot analyzes it,
+        creates smart summaries, highlights key concepts,
+        and generates exam-level questions — instantly.
+    </p>
+    {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="neon-btn hero-btn">Start Studying</a>
+    {% else %}
+        <a href="{% url 'register' %}" class="neon-btn hero-btn">Start Studying</a>
+    {% endif %}
+</section>
+
+<section class="features">
+    <div class="card feature-card">
+        <h2>Smart Summary</h2>
+        <p>AI reads your lecture slides and creates a clear, structured summary in seconds.</p>
+    </div>
+    <div class="card feature-card">
+        <h2>Key Highlights</h2>
+        <p>Important definitions, formulas and diagrams are automatically detected and emphasized.</p>
+    </div>
+    <div class="card feature-card">
+        <h2>Exam Questions</h2>
+        <p>Get 10 possible exam questions and test yourself. ScholarBot checks your answers instantly.</p>
+    </div>
+</section>
+
+<section class="how-it-works">
+    <h2>How It Works</h2>
+    <div class="steps">
+        <div class="step">
+            <h3>I. Upload PDF</h3>
+            <p>Add your lecture slides in PDF format.</p>
+        </div>
+        <div class="step">
+            <h3>II. AI Analysis</h3>
+            <p>We extract text, images and key ideas.</p>
+        </div>
+        <div class="step">
+            <h3>III. Practice</h3>
+            <p>Answer questions and track your performance.</p>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
