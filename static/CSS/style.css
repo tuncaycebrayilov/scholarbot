@@ -48,6 +48,18 @@
 
 html { background: var(--ink); scroll-behavior: smooth; }
 
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+img, div {
+  max-width: 100%;
+}
+
 body {
   font-family: var(--font-body);
   font-size: 16px;
@@ -58,7 +70,7 @@ body {
     radial-gradient(ellipse 45%  50% at 100% 85%,  rgba(212,132,42,0.03) 0%, transparent 55%),
     var(--navy-deep);
   color: var(--text);
-  overscroll-behavior: none;
+  overscroll-behavior: auto;
   min-height: 100vh;
 }
 
@@ -681,12 +693,12 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glo
 .delete-btn:hover { background: rgba(192,57,43,0.08); border-color: rgba(192,57,43,0.5); color: #e07060; }
 
 /* Analysis Section */
-.analysis-section { display: flex; justify-content: center; flex-wrap: wrap; padding: 20px; }
-.analysis-section .card { width: 520px; }
+.analysis-section { display: flex; justify-content: center; padding: 20px; box-sizing: border-box; }
+.analysis-section .card { width: 100%;   max-width: 500px; }
 
 .pdf-name { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); margin-bottom: 18px; padding: 8px 14px; background: rgba(10,14,26,0.5); border-radius: var(--radius-sm); border-left: 2px solid var(--gold-dim); font-style: italic; letter-spacing: 0.3px; }
 
-.result-text { font-family: var(--font-body); font-size: 16px; line-height: 1.9; color: var(--text); font-weight: 300; }
+.result-text {   word-wrap: break-word; overflow-wrap: break-word; font-family: var(--font-body); font-size: 16px; line-height: 1.9; color: var(--text); font-weight: 300; }
 
 .highlight-list { padding: 0; list-style: none; }
 .highlight-list li { padding: 11px 12px 11px 20px; border-bottom: 1px solid var(--border); font-family: var(--font-body); font-size: 15px; color: var(--text); line-height: 1.65; position: relative; font-weight: 300; }
@@ -819,16 +831,103 @@ textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glo
 ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
+
+
 /* ================================================================
    RESPONSIVE
 ================================================================ */
+
+/* ── Tablet: 641px – 1024px ─────────────────────────────────── */
+@media (max-width: 1024px) {
+  .navbar { padding: 0 28px; }
+  .navbar::after { left: 28px; right: 28px; }
+
+  .upload-card { width: 100%; max-width: 580px; }
+  .stats-card  { width: 100%; max-width: 580px; }
+  .dashboard-container { flex-direction: column; align-items: center; padding: 28px 16px; }
+
+  .profile-card  { width: 100%; max-width: 560px; }
+  .security-card { width: 100%; max-width: 560px; }
+  .profile-container { flex-direction: column; align-items: center; padding: 32px 16px; }
+
+  .lecture-history { width: 100%; max-width: 580px; }
+  .analysis-section .card { width: 100%; max-width: 580px; }
+
+  .step         { width: calc(50% - 12px); min-width: 200px; }
+  .feature-card { width: calc(50% - 12px); min-width: 220px; }
+
+  .convert-banner { width: 90vw; max-width: 440px; }
+}
+
+/* ── Mobile: ≤ 640px ────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .navbar { padding: 0 20px; }
-  .navbar::after { left: 20px; right: 20px; }
-  .login-card { padding: 40px 28px; }
-  .loader-box { padding: 40px 32px; min-width: auto; width: 90vw; }
-  .hero { padding: 72px 20px 52px; }
-  .dashboard-container { padding: 20px 12px; }
-  .modal-content { padding: 40px 28px; }
-  .auth-card { padding: 40px 28px; }
+  .navbar { padding: 0 16px; height: 56px; }
+  .navbar::after { left: 16px; right: 16px; }
+  .nav-links { gap: 2px; }
+  .nav-links a { padding: 6px 10px; font-size: 10px; letter-spacing: 0.4px; }
+
+  .card { padding: 22px 18px; margin: 10px 0; }
+
+  .hero { padding: 56px 16px 44px; }
+  .hero p { font-size: 16px; }
+  .hero-btn { padding: 13px 28px; letter-spacing: 2px; }
+
+  .features      { padding: 36px 16px; gap: 16px; }
+  .feature-card  { width: 100%; padding: 28px 20px; }
+  .how-it-works  { padding: 40px 16px 60px; }
+  .how-it-works h2 { font-size: 26px; margin-bottom: 32px; }
+  .steps         { gap: 16px; }
+  .step          { width: 100%; }
+
+  .login-card { padding: 36px 22px; }
+  .login-container { padding: 32px 16px; }
+
+  .dashboard-container { padding: 16px 10px; gap: 12px; }
+  .upload-card, .stats-card { width: 100%; }
+  .drop-area { padding: 28px 16px; }
+  .stat-box h3 { font-size: 32px; }
+
+  .profile-container { padding: 24px 10px; gap: 12px; }
+  .profile-card, .security-card { width: 100%; }
+  .profile-info p { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+  .lecture-history-section { padding: 0 10px; }
+  .lecture-history { width: 100%; }
+  .lecture-btn { font-size: 14px; padding: 12px 14px; }
+  .lecture-date { display: none; }
+
+  .analysis-section { display: block; padding: 10px; }
+  .analysis-section .card { width: 100%; }
+  
+
+  .loader-box { padding: 36px 24px; min-width: auto; width: 88vw; }
+  .loader-box h2 { font-size: 18px; }
+
+  .modal-content { padding: 36px 20px; width: 94vw; }
+  .modal-buttons { flex-direction: column; gap: 10px; }
+  .modal-buttons .neon-btn,
+  .modal-buttons .cancel-btn,
+  .modal-buttons .danger-btn { width: 100%; text-align: center; }
+
+  .convert-banner { width: 92vw; padding: 28px 20px; }
+  .banner-buttons { flex-direction: column; gap: 10px; }
+  .banner-buttons .neon-btn,
+  .banner-buttons .cancel-btn { width: 100%; text-align: center; }
+
+  .auth-card { padding: 36px 22px; }
+
+  .neon-btn   { padding: 12px 22px; }
+  .danger-btn { padding: 11px 18px; }
+
+  footer { padding: 22px 16px; letter-spacing: 0.8px; }
+}
+
+/* ── Very small phones: ≤ 380px ─────────────────────────────── */
+@media (max-width: 380px) {
+  .nav-links a { padding: 5px 7px; font-size: 9px; }
+  .hero h1     { font-size: 28px; }
+  .hero p      { font-size: 15px; }
+  .card        { padding: 18px 14px; }
+  .login-card  { padding: 28px 16px; }
+  .stat-box h3 { font-size: 28px; }
 }
